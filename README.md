@@ -71,7 +71,7 @@ install.packages(c("tidyverse", "lubridate" ))
 
 -   **Diferentes Perfis de Usuários:** A segmentação dos usuários por nível de atividade (Sedentários, Levemente Ativos, Ativos Moderados, Muito Ativos) demonstra que existem comportamentos e necessidades distintas, exigindo abordagens personalizadas.
 
-![Gráfico de minutos sedentários por nível de atividade](./04_Plots/Minutos%20sedent%C3%A1rios%20por%20n%C3%ADvel%20de%20atividade%20do%20usu%C3%A1rio.png)
+![Gráfico de minutos sedentários por nível de atividade](./04_Plots/Minutos%20sedent%C3%A1rios%20por%20nivel%20de%20atividade%20do%20usu%C3%A1rio.png)
 
 ## 7. Aplicação dos Insights ao Bellabeat Leaf
 
