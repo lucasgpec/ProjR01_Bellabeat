@@ -1,8 +1,5 @@
 # Relatório de Análise de Dados: Insights para a Estratégia Bellabeat
 
-![Logo da Bellabeat](https://bellabeat.com/wp-content/uploads/2021/08/logo-5.svg )
-
-  
 ## 1. Visão Geral do Projeto
   
 Este é um projeto de análise de dados para o portfólio de Ciência de Dados, focado em um estudo de caso da **Bellabeat**, uma empresa de tecnologia de bem-estar. O objetivo é analisar dados de uso de dispositivos fitness para identificar tendências e obter insights que possam guiar a estratégia de marketing da empresa.
