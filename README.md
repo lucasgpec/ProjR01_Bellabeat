@@ -1,6 +1,7 @@
 # Relatório de Análise de Dados: Insights para a Estratégia Bellabeat
 
-![Bellabeat](https://bellabeat.com/) 
+![Logo da Bellabeat](https://bellabeat.com/wp-content/uploads/2021/08/logo-5.svg )
+
   
 ## 1. Visão Geral do Projeto
   
@@ -42,10 +43,11 @@ Para executar este projeto em sua máquina local, siga os passos abaixo:
 1.  **Clone o repositório:**
   ```bash
 git clone https://github.com/lucasgpec/ProjR01_Bellabeat.git
+cd ProjR01_Bellabeat
 ```
 
 2.  **Abra o projeto no RStudio:**
-  Navegue até a pasta clonada e abra o arquivo `ProjR01.Rproj`. Isso irá configurar o diretório de trabalho automaticamente.
+  Navegue até a pasta ProjR01_Bellabeat que você acabou de clonar e dê um duplo clique no arquivo `ProjR01.Rproj`. Isso abrirá o RStudio com o diretório de trabalho já configurado corretamente.
 
 3.  **Instale as dependências:**
   Execute o comando abaixo no console do RStudio para instalar todos os pacotes necessários.
@@ -54,14 +56,25 @@ install.packages(c("tidyverse", "lubridate" ))
 ```
 
 4.  **Execute os Scripts:**
-  Abra e execute os scripts localizados na pasta `03_Scripts` na ordem apropriada para reproduzir toda a análise.
+  Abra a pasta `03_Scripts` e execute o único script presente chamado 'Rproj01' para realizar a importação, limpeza, análise e visualização dos dados.
 
 ## 6. Principais Insights (Exemplo)
 
 -   **Correlação Positiva entre Passos e Calorias Queimadas:** Uma relação clara onde o aumento da atividade (passos) leva a um maior gasto calórico. Esta é uma tendência fundamental para motivar usuários a se manterem ativos.
+
+![Gráfico de Passos vs Calorias](./04_Plots/Passos%20x%20Calorias%20queimadas.png)
+
 -   **Padrões de Atividade Variam ao Longo da Semana:** A atividade dos usuários não é constante, apresentando flutuações com dias de maior e menor engajamento. Isso sugere oportunidades para intervenções direcionadas.
+
+![Gráfico da média de passos por dia da semana](./04_Plots/M%C3%A9dia%20de%20passos%20por%20dia%20da%20semana.png)
+
 -   **Importância do Sono para o Bem-Estar Geral::** Os dados de sono revelam padrões diversos, e a qualidade do sono é um fator crítico que pode influenciar os níveis de energia e atividade do dia seguinte.
+
+![Gráfico da média de minutos de sono por dia da semana](./04_Plots/M%C3%A9dia%20de%20minutos%20de%20sono%20por%20dia%20da%20semana.png)
+
 -   **Diferentes Perfis de Usuários:** A segmentação dos usuários por nível de atividade (Sedentários, Levemente Ativos, Ativos Moderados, Muito Ativos) demonstra que existem comportamentos e necessidades distintas, exigindo abordagens personalizadas.
+
+![Gráfico de minutos sedentários por nível de atividade](./04_Plots/Minutos%20sedent%C3%A1rios%20por%20n%C3%ADvel%20de%20atividade%20do%20usu%C3%A1rio.png)
 
 ## 7. Aplicação dos Insights ao Bellabeat Leaf
 
