@@ -1,0 +1,302 @@
+# Carregamento das Bibliotecas
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(readr)
+
+# (Melhoria: Definir diretório de trabalho relativo ao script)
+# Esta linha garante que o RStudio defina o diretório de trabalho para a localização do script.
+# Isso é crucial para que os caminhos relativos funcionem corretamente.
+# Certifique-se de que o pacote 'rstudioapi' esteja instalado (install.packages('rstudioapi'))
+# Se estiver rodando fora do RStudio, você precisará definir o diretório de trabalho manualmente.
+
+if (requireNamespace("rstudioapi", quietly = TRUE)) {
+  setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+}
+
+# 1 - FUNÇÕES DE CARREGAMENTO E LIMPEZA DE DADOS (DEFINIÇÕES)
+
+# Função para carregar e limpar dados de atividade diária
+
+load_and_clean_daily_activity <- function(file_path) {
+  daily_activity <- read_csv(file_path)
+  
+# Renomear colunas para clareza e consistência
+  
+daily_activity <- daily_activity %>%
+  rename(date = ActivityDate,
+          total_steps = TotalSteps,
+          calories = Calories)
+  
+# Converter `Id` para caractere e `date` para o formato de data
+
+daily_activity$Id <- as.character(daily_activity$Id)
+daily_activity$date <- mdy(daily_activity$date)
+  
+# Criar uma nova coluna para o dia da semana
+daily_activity$day_of_week <- weekdays(daily_activity$date, abbreviate = FALSE)
+  
+# Verificar e remover duplicatas (Melhoria: Tratamento explícito de duplicatas)
+if (sum(duplicated(daily_activity)) > 0) {
+  message(paste("Removendo", sum(duplicated(daily_activity)), "linhas duplicadas em daily_activity."))
+  daily_activity <- daily_activity[!duplicated(daily_activity), ]
+}
+  
+  return(daily_activity)
+}
+
+# Função para carregar e limpar dados de sono
+load_and_clean_sleep_data <- function(file_path) {
+  sleep_day <- read_csv(file_path)
+  
+# Renomear e limpar os dados de sono
+sleep_day <- sleep_day %>%
+  rename(sleep_date = SleepDay,
+          total_sleep_minutes = TotalMinutesAsleep,
+          total_time_in_bed = TotalTimeInBed) %>%
+  mutate(sleep_date = mdy_hms(sleep_date)) %>%
+  mutate(sleep_date = as.Date(sleep_date)) # Converter para formato de data
+  
+# Converter `Id` para caractere
+sleep_day$Id <- as.character(sleep_day$Id)
+  
+# Verificar e remover duplicatas (Melhoria: Tratamento explícito de duplicatas)
+if (sum(duplicated(sleep_day)) > 0) {
+  message(paste("Removendo", sum(duplicated(sleep_day)), "linhas duplicadas em sleep_day."))
+  sleep_day <- sleep_day[!duplicated(sleep_day), ]
+}
+  
+  return(sleep_day)
+}
+
+# Função para carregar e limpar dados de peso
+load_and_clean_weight_data <- function(file_path) {
+  weight_info <- read_csv(file_path)
+  
+# Renomear e limpar os dados de peso
+weight_info <- weight_info %>%
+  rename(date = Date,
+          weight_kg = WeightKg) %>%
+  mutate(date = mdy_hms(date)) %>%
+  mutate(date = as.Date(date)) # Converter para formato de data
+  
+# Converter `Id` para caractere
+weight_info$Id <- as.character(weight_info$Id)
+  
+# Verificar e remover duplicatas (Melhoria: Tratamento explícito de duplicatas)
+if (sum(duplicated(weight_info)) > 0) {
+  message(paste("Removendo", sum(duplicated(weight_info)), "linhas duplicadas em weight_info."))
+  weight_info <- weight_info[!duplicated(weight_info), ]
+}
+  
+  return(weight_info)
+}
+
+# CHAMADAS DAS FUNÇÕES (AGORA QUE ELAS JÁ FORAM DEFINIDAS)
+# Carregar os datasets usando caminhos relativos (Melhoria: Caminhos Relativos ajustados)
+# O script está em 'Rproj01/03_Scripts', e os CSVs em 'Rproj01/02_Dates'
+# Então, para ir de '03_Scripts' para '02_Dates', precisamos subir um nível (..) e descer para '02_Dates'
+daily_activity <- load_and_clean_daily_activity("../02_Dates/dailyActivity_merged.csv")
+sleep_day <- load_and_clean_sleep_data("../02_Dates/sleepDay_merged.csv")
+weight_info <- load_and_clean_weight_data("../02_Dates/weightLogInfo_merged.csv")
+
+# Get a quick overview of each dataset
+glimpse(daily_activity)
+glimpse(sleep_day)
+glimpse(weight_info)
+
+# Verificar IDs únicos e duplicatas (já feito nas funções, mas mantido para verificação)
+n_distinct(daily_activity$Id)
+sum(duplicated(daily_activity))
+
+# Verificar valores ausentes (Melhoria: Documentar a decisão de não imputar NAs para esta análise)
+# Para esta análise exploratória, optamos por não imputar valores ausentes, 
+# pois a remoção de linhas com NAs pode reduzir significativamente o dataset, 
+# especialmente o de peso. As análises serão feitas com os dados disponíveis.
+sum(is.na(daily_activity))
+sum(is.na(sleep_day))
+sum(is.na(weight_info)) # O dataset de peso tem NAs na coluna 'Fat', que não será usada diretamente.
+
+# Fusão dos datasets para uma análise mais abrangente
+# (Melhoria: Reconhecer a limitação do dataset de peso)
+# A fusão resultará em um dataset menor devido ao número limitado de registros de peso.
+# As análises envolvendo peso devem ser interpretadas com cautela.
+merged_data <- merge(daily_activity, sleep_day, by.x = c("Id", "date"), by.y = c("Id", "sleep_date"), all.x = TRUE) # Usar all.x para manter todas as atividades, mesmo sem dados de sono
+final_merged_data <- merge(merged_data, weight_info, by = c("Id", "date"), all.x = TRUE) # Usar all.x para manter atividades e sono, mesmo sem dados de peso
+
+glimpse(final_merged_data)
+
+# --- 2. Análise Descritiva e Aprofundamento (Melhorias: Sono, Correlação, Segmentação) ---
+
+# Estatísticas descritivas para colunas chave de atividade
+cat("\nEstatísticas Descritivas de Atividade:\n")
+daily_activity %>%
+  select(total_steps, calories, VeryActiveMinutes, FairlyActiveMinutes, LightlyActiveMinutes, SedentaryMinutes) %>%
+  summary()
+
+# Média de minutos gastos em cada nível de atividade
+cat("\nMédia de Minutos por Nível de Atividade:\n")
+daily_activity %>%
+  summarise(
+    avg_very_active = mean(VeryActiveMinutes, na.rm = TRUE),
+    avg_fairly_active = mean(FairlyActiveMinutes, na.rm = TRUE),
+    avg_lightly_active = mean(LightlyActiveMinutes, na.rm = TRUE),
+    avg_sedentary = mean(SedentaryMinutes, na.rm = TRUE)
+  ) %>%
+  print()
+
+# (Melhoria: Estatísticas Descritivas do Sono)
+cat("\nEstatísticas Descritivas de Sono:\n")
+sleep_day %>%
+  select(total_sleep_minutes, total_time_in_bed) %>%
+  summary()
+
+# (Melhoria: Análise de Correlação)
+# Calculando a matriz de correlação para variáveis numéricas relevantes
+# Removendo NAs para o cálculo da correlação
+correlation_data <- final_merged_data %>%
+  select(total_steps, calories, VeryActiveMinutes, FairlyActiveMinutes, LightlyActiveMinutes, SedentaryMinutes, total_sleep_minutes, total_time_in_bed, weight_kg) %>%
+  drop_na()
+
+if (nrow(correlation_data) > 1) { # Verificar se há dados suficientes para correlação
+  correlation_matrix <- cor(correlation_data)
+  cat("\nMatriz de Correlação:\n")
+  print(round(correlation_matrix, 2))
+} else {
+  cat("\nNão há dados suficientes para calcular a matriz de correlação após remover NAs.\n")
+}
+
+# (Melhoria: Segmentação de Usuários por Nível de Atividade)
+# Definindo níveis de atividade com base na média de minutos ativos
+user_activity_summary <- daily_activity %>%
+  group_by(Id) %>%
+  summarise(
+    avg_total_steps = mean(total_steps, na.rm = TRUE),
+    avg_very_active_minutes = mean(VeryActiveMinutes, na.rm = TRUE),
+    avg_fairly_active_minutes = mean(FairlyActiveMinutes, na.rm = TRUE),
+    avg_lightly_active_minutes = mean(LightlyActiveMinutes, na.rm = TRUE),
+    avg_sedentary_minutes = mean(SedentaryMinutes, na.rm = TRUE),
+    total_days_logged = n_distinct(date)
+  ) %>%
+  mutate(
+    activity_level = case_when(
+      avg_very_active_minutes > 30 ~ "Muito Ativo",
+      avg_fairly_active_minutes > 20 ~ "Ativo Moderado",
+      avg_lightly_active_minutes > 150 ~ "Levemente Ativo",
+      TRUE ~ "Sedentário"
+    )
+  )
+
+cat("\nResumo da Segmentação de Usuários por Nível de Atividade:\n")
+user_activity_summary %>%
+  group_by(activity_level) %>%
+  summarise(count = n(), avg_steps = mean(avg_total_steps)) %>%
+  print()
+
+# Juntar com os dados finais para análises segmentadas
+final_merged_data_segmented <- merge(final_merged_data, user_activity_summary %>%
+                                       select(Id, activity_level, total_days_logged),
+                                     by = "Id", all.x = TRUE)
+
+# --- 3. Visualizações (Melhorias: Consistência, Títulos, Gráficos Adicionais) ---
+
+# Definir um tema consistente para os gráficos (Melhoria: Consistência Visual)
+my_theme <- theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+# Gráfico 1: Scatter plot de Total Steps vs. Calories (Melhoria: Coeficiente de Correlação)
+plot_steps_calories <- ggplot(data = daily_activity, aes(x = total_steps, y = calories)) +
+  geom_point(color = "#FF6347", alpha = 0.6) +
+  geom_smooth(method = "lm", color = "darkblue", se = FALSE) +
+  labs(title = "Relação entre Passos Totais e Calorias Queimadas",
+       x = "Total de Passos",
+       y = "Calorias Queimadas") +
+  my_theme
+print(plot_steps_calories)
+
+# Gráfico 2: Bar chart de Average Steps by Day of the Week
+plot_avg_steps_weekday <- daily_activity %>%
+  group_by(day_of_week) %>%
+  summarise(avg_steps = mean(total_steps, na.rm = TRUE)) %>%
+  mutate(day_of_week = factor(day_of_week, levels = c("domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"))) %>%
+  ggplot(aes(x = day_of_week, y = avg_steps, fill = day_of_week)) +
+  geom_bar(stat = "identity") +
+  
+# LINHA ADICIONADA PARA OS RÓTULOS
+geom_text(aes(label = round(avg_steps, 0)), vjust = -0.5, color = "black", size = 3.5) +
+  
+  labs(title = "Média de Passos por Dia da Semana",
+       x = "Dia da Semana",
+       y = "Média de Passos") +
+  my_theme +
+  theme(legend.position = "none")
+print(plot_avg_steps_weekday)
+
+# Gráfico 3: Scatter plot de Total Steps vs. Weight (Melhoria: Nota sobre limitação da amostra)
+plot_steps_weight <- ggplot(data = final_merged_data, aes(x = total_steps, y = weight_kg)) +
+  geom_point(color = "#6A5ACD", alpha = 0.7) +
+  labs(title = "Relação entre Peso e Total de Passos (Amostra Limitada)",
+       x = "Total de Passos",
+       y = "Peso (kg)",
+       caption = "*Atenção: Dados de peso limitados, interpretar com cautela.") +
+  my_theme
+print(plot_steps_weight)
+
+# (Melhoria: Gráfico Adicional - Média de Sono por Dia da Semana)
+plot_avg_sleep_weekday <- sleep_day %>%
+  mutate(day_of_week = weekdays(sleep_date, abbreviate = FALSE)) %>%
+  group_by(day_of_week) %>%
+  summarise(avg_sleep_minutes = mean(total_sleep_minutes, na.rm = TRUE)) %>%
+  mutate(day_of_week = factor(day_of_week, levels = c("domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"))) %>%
+  ggplot(aes(x = day_of_week, y = avg_sleep_minutes, fill = day_of_week)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Média de Minutos de Sono por Dia da Semana",
+       x = "Dia da Semana",
+       y = "Média de Minutos de Sono") +
+  my_theme +
+  theme(legend.position = "none")
+print(plot_avg_sleep_weekday)
+
+# (Melhoria: Gráfico Adicional - Distribuição de Minutos Sedentários por Nível de Atividade)
+plot_sedentary_by_activity <- ggplot(data = final_merged_data_segmented, aes(x = activity_level, y = SedentaryMinutes, fill = activity_level)) +
+  geom_boxplot() +
+  labs(title = "Minutos Sedentários por Nível de Atividade do Usuário",
+       x = "Nível de Atividade",
+       y = "Minutos Sedentários") +
+  my_theme +
+  theme(legend.position = "none")
+print(plot_sedentary_by_activity)
+
+# --- 4. Insights para a Bellabeat e Aplicação ao Produto Leaf (Melhoria: Seção Dedicada) ---
+
+# Produto Bellabeat escolhido para aplicação dos insights: Bellabeat Leaf
+
+cat("\n# Insights para a Bellabeat e Aplicação ao Produto Leaf\n")
+cat("\nO Bellabeat Leaf é um dispositivo que monitora atividade, sono e estresse, tornando-o ideal para aplicar os insights desta análise.\n")
+
+cat("\n## Tendência 1: Correlação Positiva entre Passos e Calorias Queimadas\n")
+cat("**A Tendência:** Observamos uma forte correlação positiva entre o número de passos dados e as calorias queimadas. Isso significa que quanto mais uma pessoa se move, mais energia ela gasta.\n")
+cat("**Aplicação ao Cliente Bellabeat (Leaf):** Usuárias do Leaf que aumentam seus passos diários podem esperar um aumento proporcional na queima de calorias, o que pode ser um motivador eficaz para atingir metas de fitness e bem-estar. O Leaf pode quantificar e visualizar esse progresso.\n")
+cat("**Influência na Estratégia de Marketing (Leaf):** Campanhas de marketing podem destacar a funcionalidade de rastreamento de atividade do Leaf, mostrando gráficos de progresso e os benefícios da queima de calorias. O aplicativo Bellabeat pode introduzir desafios de \'passos diários\' com recompensas virtuais para incentivar o engajamento e a consistência.\n")
+
+cat("\n## Tendência 2: Padrões de Atividade Variam ao Longo da Semana\n")
+cat("**A Tendência:** A análise da média de passos por dia da semana revela que os níveis de atividade podem variar, com possíveis quedas em certos dias (ex: fins de semana ou meio da semana).\n")
+cat("**Aplicação ao Cliente Bellabeat (Leaf):** Usuárias do Leaf podem se beneficiar de lembretes e incentivos em dias de menor atividade. O Leaf, sendo um monitor discreto, pode encorajar pequenas atividades ao longo do dia, mesmo em dias mais ocupados ou de descanso.\n")
+cat("**Influência na Estratégia de Marketing (Leaf):** Criar campanhas de fim de semana focadas em \'Atividade Leve e Relaxante\' ou \'Desafios de Fim de Semana\' para o Leaf, promovendo atividades como caminhadas no parque, jardinagem ou yoga. Mensagens podem ser: \'Não deixe o fim de semana quebrar seu ritmo! Seu Leaf te ajuda a manter o movimento de forma prazerosa.\' O aplicativo Bellabeat pode enviar lembretes personalizados nas manhãs de sábado e domingo, sugerindo atividades de baixo impacto ou desafios de \'mini-metas\' para o fim de semana.\n")
+
+cat("\n## Tendência 3: Importância do Sono para o Bem-Estar Geral\n")
+cat("**A Tendência:** Os dados de sono mostram padrões variados na duração e consistência do sono. A qualidade do sono é um pilar fundamental da saúde, e sua relação com a atividade diária é crucial.\n")
+cat("**Aplicação ao Cliente Bellabeat (Leaf):** O Leaf monitora o sono, permitindo que as usuárias compreendam seus próprios padrões de descanso. Insights sobre a média de sono por dia da semana podem ajudar a identificar noites de sono insuficientes, que podem impactar a energia e a atividade do dia seguinte.\n")
+cat("**Influência na Estratégia de Marketing (Leaf):** Campanhas podem focar na importância do sono de qualidade, mostrando como o Leaf ajuda a monitorar e melhorar os hábitos de sono. O aplicativo Bellabeat pode oferecer dicas de higiene do sono, meditações guiadas e relatórios personalizados que correlacionam o sono com os níveis de energia e atividade do dia, incentivando um ciclo virtuoso de descanso e movimento.\n")
+
+cat("\n## Tendência 4: Segmentação de Usuários para Mensagens Personalizadas\n")
+cat("**A Tendência:** Usuários apresentam diferentes níveis de atividade (sedentários, levemente ativos, ativos moderados, muito ativos), o que indica a necessidade de abordagens personalizadas.\n")
+cat("**Aplicação ao Cliente Bellabeat (Leaf):** O Leaf pode ser posicionado de forma diferente para cada segmento. Para usuárias \'Sedentárias\', o foco pode ser em pequenos incrementos de movimento. Para \'Muito Ativas\', o foco pode ser em otimização de desempenho e recuperação.\n")
+cat("**Influência na Estratégia de Marketing (Leaf):** A Bellabeat pode segmentar suas campanhas de marketing com base nos níveis de atividade detectados pelo Leaf. Usuárias com baixa atividade podem receber mensagens sobre os benefícios da atividade leve e gradual, enquanto usuárias com alta atividade podem receber conteúdo sobre otimização de desempenho e recuperação. Isso garante que as mensagens sejam mais relevantes e ressoem melhor com cada grupo.\n")
+

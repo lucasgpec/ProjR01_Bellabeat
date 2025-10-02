@@ -1,0 +1,27 @@
+{
+    "id": "36A6086F",
+    "path": "~/Rproj01/Rproj01/03_Scripts/Rproj02.R",
+    "project_path": "Rproj02.R",
+    "type": "r_source",
+    "hash": "729942637",
+    "contents": "",
+    "dirty": false,
+    "created": 1758819586875.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "302,0",
+        "scrollLine": "272",
+        "ignored_words": "formato,DEFINIÇÕES,FUNÇÕES,definir,trabalho,manualmente\n"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1758827022,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1758827022087,
+    "read_only": false,
+    "read_only_alternatives": []
+}
